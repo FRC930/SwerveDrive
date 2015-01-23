@@ -11,8 +11,7 @@ public class SwerveDrive {
 	 * 
 	 */
 
-	final double WIDTH = 24;
-	final double LENGTH = 36;
+	double width, length;
 
 	private double strafe, forward, rotationCW, Rx, Ry;
 	private double topX, bottomX, rightY, leftY;
@@ -22,7 +21,12 @@ public class SwerveDrive {
 			bottomRightAngle;
 
 	// CONSTRUCTOR
-	
+
+	public SwerveDrive(double length, double width, SpeedController TR,
+			SpeedController TL, SpeedController BL, SpeedController BR) {
+		this.width = width;
+		this.length = length;
+	}
 
 	// INTERFACE METHODS
 	public void updateSwerve(double forwardIn, double strafeIn,
