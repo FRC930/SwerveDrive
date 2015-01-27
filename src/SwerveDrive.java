@@ -11,12 +11,18 @@ public class SwerveDrive {
 	 * 
 	 */
 
-	double width, length;
-
 	// SpeedController TR, TL, BR, BL;
+
+	// insert some containment object for the last data received
+
+	private double width, length;
+
+	private boolean fieldcentric;
 
 	private double strafe, forward, rotationCW, Rx, Ry;
 	private double topX, bottomX, rightY, leftY;
+
+	// why not add some object to hold this stuff too?
 	private double topRightSpeed, topLeftSpeed, bottomLeftSpeed,
 			bottomRightSpeed;
 	private double topRightAngle, topLeftAngle, bottomLeftAngle,
@@ -32,6 +38,26 @@ public class SwerveDrive {
 												 */) {
 		this.width = width;
 		this.length = length;
+		this.fieldcentric = false;
+
+		// this.TR = TR; this.TL = TL; this.BL = BL; this.BR = BR;
+
+	}
+
+	public SwerveDrive(double length, double width, boolean fieldcentric/*
+																		 * ,
+																		 * SpeedController
+																		 * TR,
+																		 * SpeedController
+																		 * TL,
+																		 * SpeedController
+																		 * BL,
+																		 * SpeedController
+																		 * BR
+																		 */) {
+		this.width = width;
+		this.length = length;
+		this.fieldcentric = fieldcentric;
 
 		// this.TR = TR; this.TL = TL; this.BL = BL; this.BR = BR;
 
@@ -87,6 +113,12 @@ public class SwerveDrive {
 	}
 
 	// CALC METHODS
+	private void convertFieldToRobocentric() {
+		// take the change in the field centric heading of the robot and and use
+		// that as omega in robocentric
+		// shift the heading of the robot and then find vx and vy
+	}
+
 	private void normalizeTranslation() {
 		if (Math.pow(forward, 2) + Math.pow(strafe, 2) > 1) {
 			forward = Math.sqrt(Math.pow(forward, 2)
@@ -161,6 +193,9 @@ public class SwerveDrive {
 	}
 
 	private void calc() {
+		if (fieldcentric == true) {
+			this.convertFieldToRobocentric();
+		}
 		this.normalizeTranslation();
 		this.setRotationVectors();
 		this.setIntermediates();
