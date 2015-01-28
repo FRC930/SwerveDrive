@@ -38,13 +38,7 @@ public class SwerveDrive {
 	private double width, length; // length and width of the robot
 
 	// Calculation Components
-	private double strafe, forward, rotationCW, Rx, Ry; // basic input variables
-	private double topX, bottomX, rightY, leftY; // intermediate values for the
-													// wheel velocity components
-	private double topRightSpeed, topLeftSpeed, bottomLeftSpeed,
-			bottomRightSpeed; // speed variables for the wheels
-	private double topRightAngle, topLeftAngle, bottomLeftAngle,
-			bottomRightAngle; // angle variables for the wheels
+	final double ANGLE_CONVERSION = 180 / Math.PI;
 
 	// CONSTRUCTORS - eventually get them all to accept passed SpeedControllers
 
@@ -67,77 +61,23 @@ public class SwerveDrive {
 	// INTERFACE METHODS
 
 	// update swerve for raw robocentic values
-	public void updateSwerve(double forwardIn, double strafeIn,
-			double rotationCWIn) {
+	public void updateSwerve(double forward, double strafe, double rotationCW) {
 
 		this.timeControl();
 
-		this.forward = forwardIn;
-		this.strafe = strafeIn;
-		this.rotationCW = rotationCWIn;
+		rotationCW *= 2 * Math.PI;
 
-		this.calc();
-		this.output();
-
-		updateEndTime = System.currentTimeMillis();
-	}
-
-	// update swerve from joysticks (either robo or field cent)
-	public void updateSwerve(Joystick translationStick, Joystick headingStick) {
-
-		this.timeControl();
-
-		// if the code is field cent set the sticks for future use, otherwise
-		// use to get values for the robo cent
-		if (isFieldcentric == true) {
-			this.translationStick = translationStick;
-			this.headingStick = headingStick; // field cent heading
-		} else {
-			strafe = translationStick.getX();
-			forward = translationStick.getY();
-			rotationCW = headingStick.getX() * 2 * Math.PI; // rotational
-															// velocity omega,
-															// converted to rad
-		}
-
-		this.calc();
-		this.output();
-
-		updateEndTime = System.currentTimeMillis();
-	}
-
-	public void setStrafe(double strafeIn) {
-		strafe = strafeIn;
-	}
-
-	public void setForward(double forwardIn) {
-		forward = forwardIn;
-	}
-
-	public void setRotation(double rotationIn) { // rotation measured clockwise
-													// and from North
-		rotationCW = 2 * Math.PI * rotationIn;
-	}
-
-	public void switchCentricity() { // switch from robo to field and vicea
-										// versa while in code
-		isFieldcentric = !isFieldcentric;
-	}
-
-	// CALC METHODS
-
-	private void convertFieldToRobocentric() {
-
+		// Convert robo to field cent
 		// calculate the current heading
 		heading = 90 - Math.atan2(headingStick.getX(), headingStick.getY())
-				* 180 / Math.PI;
+				* ANGLE_CONVERSION;
 
 		// defining the velocity vector in polar to convert to robocentric
 		double magnitudeV = Math.sqrt(Math.pow(translationStick.getX(), 2)
 				+ Math.pow(translationStick.getY(), 2));
 		double phiV = 90
 				- Math.atan2(translationStick.getX(), translationStick.getY())
-				* 180 / Math.PI;
+				* ANGLE_CONVERSION;
 
 		// do the conversion so the robocentic code can handle the rest
 		strafe = magnitudeV * Math.sin(phiV - lastHeading);
@@ -145,34 +85,36 @@ public class SwerveDrive {
 		rotationCW = (heading - lastHeading) / (timeSinceLastUpdate * 1000);
 
 		lastHeading = heading;
-	}
 
-	private void normalizeTranslation() {
+		// Normalize Translation
 		// not necessary with the XBox controllers but just in case...
 		if (Math.pow(forward, 2) + Math.pow(strafe, 2) > 1) {
-			forward = Math.sqrt(Math.pow(forward, 2)
-					/ (Math.pow(forward, 2) + Math.pow(strafe, 2)));
-			strafe = Math.sqrt(Math.pow(strafe, 2)
-					/ (Math.pow(forward, 2) + Math.pow(strafe, 2)));
+			double f2 = Math.pow(forward, 2);
+			double s2 = Math.pow(strafe, 2);
+
+			forward = Math.sqrt(f2 / (f2 + s2));
+			strafe = Math.sqrt(s2 / (f2 + s2));
 		}
-	}
 
-	private void setIntermediates() {
-		Rx = rotationCW * length / 2;
-		Ry = rotationCW * width / 2;
+		// Set intermediates
+		double Rx = rotationCW * length / 2;
+		double Ry = rotationCW * width / 2;
 
-		topX = strafe + Rx;
-		rightY = forward - Ry;
-		bottomX = strafe - Rx;
-		leftY = strafe + Ry;
-	}
+		double topX = strafe + Rx;
+		double rightY = forward - Ry;
+		double bottomX = strafe - Rx;
+		double leftY = strafe + Ry;
 
-	private void setWheelSpeeds() {
-		topRightSpeed = Math.sqrt(Math.pow(topX, 2) + Math.pow(rightY, 2));
-		topLeftSpeed = Math.sqrt(Math.pow(topX, 2) + Math.pow(leftY, 2));
-		bottomLeftSpeed = Math.sqrt(Math.pow(bottomX, 2) + Math.pow(leftY, 2));
-		bottomRightSpeed = Math
-				.sqrt(Math.pow(bottomX, 2) + Math.pow(rightY, 2));
+		// Set wheel speeds
+		double tx2 = Math.pow(topX, 2);
+		double bx2 = Math.pow(bottomX, 2);
+		double ry2 = Math.pow(rightY, 2);
+		double ly2 = Math.pow(leftY, 2);
+
+		double topRightSpeed = Math.sqrt(tx2 + ry2);
+		double topLeftSpeed = Math.sqrt(tx2 + ly2);
+		double bottomLeftSpeed = Math.sqrt(bx2 + ly2);
+		double bottomRightSpeed = Math.sqrt(bx2 + ry2);
 
 		double max;
 		max = topRightSpeed;
@@ -191,51 +133,154 @@ public class SwerveDrive {
 			bottomLeftSpeed /= max;
 			bottomRightSpeed /= max;
 		}
-	}
 
-	private void setWheelAngles() {
-		topRightAngle = 90 - Math.atan2(topX, rightY) * 180 / Math.PI;
-		topLeftAngle = 90 - Math.atan2(topX, leftY) * 180 / Math.PI;
-		bottomLeftAngle = 90 - Math.atan2(bottomX, leftY) * 180 / Math.PI;
-		bottomRightAngle = 90 - Math.atan2(bottomX, rightY) * 180 / Math.PI;
-	}
+		// Set wheel angles
+		double topRightAngle = 90 - Math.atan2(topX, rightY) * ANGLE_CONVERSION;
+		double topLeftAngle = 90 - Math.atan2(topX, leftY) * ANGLE_CONVERSION;
+		double bottomLeftAngle = 90 - Math.atan2(bottomX, leftY)
+				* ANGLE_CONVERSION;
+		double bottomRightAngle = 90 - Math.atan2(bottomX, rightY)
+				* ANGLE_CONVERSION;
 
-	private void calc() {
-		if (isFieldcentric == true) {
-			this.convertFieldToRobocentric();
-		}
-		this.normalizeTranslation();
-		this.setIntermediates();
-		this.setWheelSpeeds();
-		this.setWheelAngles();
-	}
-
-	private void output() {
-		// System.out output
+		// output
 		System.out.println(topRightSpeed + "\n" + topLeftSpeed + "\n"
 				+ bottomLeftSpeed + "\n" + bottomRightSpeed + "\n");
 		System.out.println(topRightAngle + "\n" + topLeftAngle + "\n"
 				+ bottomLeftAngle + "\n" + bottomRightAngle + "\n");
 
-		// SmartDashboard output
-		// SmartDashboard.putNumber("Top Right Speed", topRightSpeed);
-		// SmartDashboard.putNumber("Top Left Speed", topRightSpeed);
-		// SmartDashboard.putNumber("Bottom Left Speed", topRightSpeed);
-		// SmartDashboard.putNumber("Bottom Right Speed", topRightSpeed);
-		//
-		// SmartDashboard.putNumber("Top Right Angle", topRightAngle);
-		// SmartDashboard.putNumber("Top Left Angle", topRightAngle);
-		// SmartDashboard.putNumber("Bottom Left Angle", topRightAngle);
-		// SmartDashboard.putNumber("Bottom Right Angle", topRightAngle);
-
-		// Wheel Output
-		// TR.set(topRightSpeed);
-		// TL.set(topLeftSpeed);
-		// BL.set(bottomLeftSpeed);
-		// BR.set(bottomRightSpeed);
-		//
-		//
+		updateEndTime = System.currentTimeMillis();
 	}
+
+	// update swerve from joysticks (either robo or field cent)
+	public void updateSwerve(Joystick translationStick, Joystick headingStick) {
+
+		// basic input values
+		double strafe, forward, rotationCW;
+
+		this.timeControl();
+
+		// if the code is field cent set the sticks for future use, otherwise
+		// use to get values for the robo cent
+		if (isFieldcentric == true) {
+			this.translationStick = translationStick;
+			this.headingStick = headingStick; // field cent heading
+		} else {
+			strafe = translationStick.getX();
+			forward = translationStick.getY();
+			rotationCW = headingStick.getX() * 2 * Math.PI; // rotational
+															// velocity omega,
+															// converted to rad
+		}
+
+		// Convert robo to field cent
+		// calculate the current heading
+		heading = 90 - Math.atan2(headingStick.getX(), headingStick.getY())
+				* ANGLE_CONVERSION;
+
+		// defining the velocity vector in polar to convert to robocentric
+		double magnitudeV = Math.sqrt(Math.pow(translationStick.getX(), 2)
+				+ Math.pow(translationStick.getY(), 2));
+		double phiV = 90
+				- Math.atan2(translationStick.getX(), translationStick.getY())
+				* ANGLE_CONVERSION;
+
+		// do the conversion so the robocentic code can handle the rest
+		strafe = magnitudeV * Math.sin(phiV - lastHeading);
+		forward = magnitudeV * Math.cos(phiV - lastHeading);
+		rotationCW = (heading - lastHeading) / (timeSinceLastUpdate * 1000);
+
+		lastHeading = heading;
+
+		// Normalize Translation
+		// not necessary with the XBox controllers but just in case...
+		if (Math.pow(forward, 2) + Math.pow(strafe, 2) > 1) {
+			double f2 = Math.pow(forward, 2);
+			double s2 = Math.pow(strafe, 2);
+
+			forward = Math.sqrt(f2 / (f2 + s2));
+			strafe = Math.sqrt(s2 / (f2 + s2));
+		}
+
+		// Set intermediates
+		double Rx = rotationCW * length / 2;
+		double Ry = rotationCW * width / 2;
+
+		double topX = strafe + Rx;
+		double rightY = forward - Ry;
+		double bottomX = strafe - Rx;
+		double leftY = strafe + Ry;
+
+		// Set wheel speeds
+		double tx2 = Math.pow(topX, 2);
+		double bx2 = Math.pow(bottomX, 2);
+		double ry2 = Math.pow(rightY, 2);
+		double ly2 = Math.pow(leftY, 2);
+
+		double topRightSpeed = Math.sqrt(tx2 + ry2);
+		double topLeftSpeed = Math.sqrt(tx2 + ly2);
+		double bottomLeftSpeed = Math.sqrt(bx2 + ly2);
+		double bottomRightSpeed = Math.sqrt(bx2 + ry2);
+
+		double max;
+		max = topRightSpeed;
+		if (topLeftSpeed > max) {
+			max = topLeftSpeed;
+		}
+		if (bottomLeftSpeed > max) {
+			max = bottomLeftSpeed;
+		}
+		if (bottomRightSpeed > max) {
+			max = bottomRightSpeed;
+		}
+		if (max > 1) {
+			topRightSpeed /= max;
+			topLeftSpeed /= max;
+			bottomLeftSpeed /= max;
+			bottomRightSpeed /= max;
+		}
+
+		// Set wheel angles
+		double topRightAngle = 90 - Math.atan2(topX, rightY) * ANGLE_CONVERSION;
+		double topLeftAngle = 90 - Math.atan2(topX, leftY) * ANGLE_CONVERSION;
+		double bottomLeftAngle = 90 - Math.atan2(bottomX, leftY)
+				* ANGLE_CONVERSION;
+		double bottomRightAngle = 90 - Math.atan2(bottomX, rightY)
+				* ANGLE_CONVERSION;
+
+		// output
+		System.out.println(topRightSpeed + "\n" + topLeftSpeed + "\n"
+				+ bottomLeftSpeed + "\n" + bottomRightSpeed + "\n");
+		System.out.println(topRightAngle + "\n" + topLeftAngle + "\n"
+				+ bottomLeftAngle + "\n" + bottomRightAngle + "\n");
+
+		updateEndTime = System.currentTimeMillis();
+	}
+
+	public void switchCentricity() { // switch from robo to field and vicea
+										// versa while in code
+		isFieldcentric = !isFieldcentric;
+	}
+
+	// extra output code
+
+	// SmartDashboard output
+	// SmartDashboard.putNumber("Top Right Speed", topRightSpeed);
+	// SmartDashboard.putNumber("Top Left Speed", topRightSpeed);
+	// SmartDashboard.putNumber("Bottom Left Speed", topRightSpeed);
+	// SmartDashboard.putNumber("Bottom Right Speed", topRightSpeed);
+	//
+	// SmartDashboard.putNumber("Top Right Angle", topRightAngle);
+	// SmartDashboard.putNumber("Top Left Angle", topRightAngle);
+	// SmartDashboard.putNumber("Bottom Left Angle", topRightAngle);
+	// SmartDashboard.putNumber("Bottom Right Angle", topRightAngle);
+
+	// Wheel Output
+	// TR.set(topRightSpeed);
+	// TL.set(topLeftSpeed);
+	// BL.set(bottomLeftSpeed);
+	// BR.set(bottomRightSpeed);
+	//
+	//
 
 	// CONTROL METHODS
 
