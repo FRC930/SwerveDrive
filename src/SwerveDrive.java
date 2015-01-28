@@ -19,9 +19,11 @@ public class SwerveDrive {
 	// DECLARATIONS OF VARIABLES AND OTHER THINGS THE CODE MIGHT FIND USEFUL
 
 	// Time Components
-	final double UPDATE_TIME = .005; // time between updates to the robot, in
-										// seconds
-	double timeSinceLastUpdate; // time since the last update, in seconds
+	final long UPDATE_TIME = 5; // time between updates to the robot,
+								// in milliseconds
+	long updateStartTime; // time of this update's start
+	long updateEndTime; // time of the last update's end
+	long timeSinceLastUpdate; // time since the last update, in seconds
 
 	// SpeedController Components - if possible to implement
 	// SpeedController TR, TL, BR, BL;
@@ -51,7 +53,7 @@ public class SwerveDrive {
 		this.length = length;
 		this.isFieldcentric = false;
 		this.lastHeading = 0;
-		this.timeSinceLastUpdate = UPDATE_TIME;
+		this.updateEndTime = System.currentTimeMillis();
 	}
 
 	public SwerveDrive(double length, double width, boolean fieldcentric) {
@@ -59,16 +61,16 @@ public class SwerveDrive {
 		this.length = length;
 		this.isFieldcentric = fieldcentric;
 		this.lastHeading = 0;
-		this.timeSinceLastUpdate = UPDATE_TIME;
+		this.updateEndTime = System.currentTimeMillis();
 	}
-	
-	
 
 	// INTERFACE METHODS
 
 	// update swerve for raw robocentic values
 	public void updateSwerve(double forwardIn, double strafeIn,
 			double rotationCWIn) {
+
+		this.timeControl();
 
 		this.forward = forwardIn;
 		this.strafe = strafeIn;
@@ -77,10 +79,13 @@ public class SwerveDrive {
 		this.calc();
 		this.output();
 
+		updateEndTime = System.currentTimeMillis();
 	}
 
 	// update swerve from joysticks (either robo or field cent)
 	public void updateSwerve(Joystick translationStick, Joystick headingStick) {
+
+		this.timeControl();
 
 		// if the code is field cent set the sticks for future use, otherwise
 		// use to get values for the robo cent
@@ -97,6 +102,8 @@ public class SwerveDrive {
 
 		this.calc();
 		this.output();
+
+		updateEndTime = System.currentTimeMillis();
 	}
 
 	public void setStrafe(double strafeIn) {
@@ -135,7 +142,7 @@ public class SwerveDrive {
 		// do the conversion so the robocentic code can handle the rest
 		strafe = magnitudeV * Math.sin(phiV - lastHeading);
 		forward = magnitudeV * Math.cos(phiV - lastHeading);
-		rotationCW = (heading - lastHeading) / UPDATE_TIME;
+		rotationCW = (heading - lastHeading) / (timeSinceLastUpdate * 1000);
 
 		lastHeading = heading;
 	}
@@ -150,12 +157,10 @@ public class SwerveDrive {
 		}
 	}
 
-	private void setRotationVectors() {
+	private void setIntermediates() {
 		Rx = rotationCW * length / 2;
 		Ry = rotationCW * width / 2;
-	}
 
-	private void setIntermediates() {
 		topX = strafe + Rx;
 		rightY = forward - Ry;
 		bottomX = strafe - Rx;
@@ -200,7 +205,6 @@ public class SwerveDrive {
 			this.convertFieldToRobocentric();
 		}
 		this.normalizeTranslation();
-		this.setRotationVectors();
 		this.setIntermediates();
 		this.setWheelSpeeds();
 		this.setWheelAngles();
@@ -231,5 +235,15 @@ public class SwerveDrive {
 		// BR.set(bottomRightSpeed);
 		//
 		//
+	}
+
+	// CONTROL METHODS
+
+	private void timeControl() {
+		updateStartTime = System.currentTimeMillis();
+		timeSinceLastUpdate = updateStartTime - updateEndTime;
+		while (timeSinceLastUpdate < UPDATE_TIME) {
+			timeSinceLastUpdate = updateStartTime - updateEndTime;
+		}
 	}
 }
