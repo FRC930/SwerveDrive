@@ -17,36 +17,41 @@ public class SwerveDrive {
 	 */
 
 	// DECLARATIONS OF VARIABLES AND OTHER THINGS THE CODE MIGHT FIND USEFUL
+
+	// Time Components
 	final double UPDATE_TIME = .005; // time between updates to the robot, in
 										// seconds
 	double timeSinceLastUpdate; // time since the last update, in seconds
 
-	// SpeedController TR, TL, BR, BL; - if possible to implement
+	// SpeedController Components - if possible to implement
+	// SpeedController TR, TL, BR, BL;
 
+	// Field Centric Specific Components
 	private boolean isFieldcentric; // are we doin' field centric calculations?
 	Joystick translationStick, headingStick; // field centric sticks to control
 												// the robot
+	private double heading, lastHeading; // field centric headings
+
+	// Robot Specs
 	private double width, length; // length and width of the robot
 
+	// Calculation Components
 	private double strafe, forward, rotationCW, Rx, Ry; // basic input variables
 	private double topX, bottomX, rightY, leftY; // intermediate values for the
 													// wheel velocity components
-
 	private double topRightSpeed, topLeftSpeed, bottomLeftSpeed,
 			bottomRightSpeed; // speed variables for the wheels
 	private double topRightAngle, topLeftAngle, bottomLeftAngle,
 			bottomRightAngle; // angle variables for the wheels
 
-	private double heading, lastHeading;
+	// CONSTRUCTORS - eventually get them all to accept passed SpeedControllers
 
-	// CONSTRUCTOR - eventually get them all to accept passed speedcontrollers
 	public SwerveDrive(double length, double width) {
 		this.width = width;
 		this.length = length;
 		this.isFieldcentric = false;
 		this.lastHeading = 0;
 		this.timeSinceLastUpdate = UPDATE_TIME;
-
 	}
 
 	public SwerveDrive(double length, double width, boolean fieldcentric) {
@@ -55,10 +60,12 @@ public class SwerveDrive {
 		this.isFieldcentric = fieldcentric;
 		this.lastHeading = 0;
 		this.timeSinceLastUpdate = UPDATE_TIME;
-
 	}
+	
+	
 
 	// INTERFACE METHODS
+
 	// update swerve for raw robocentic values
 	public void updateSwerve(double forwardIn, double strafeIn,
 			double rotationCWIn) {
@@ -72,19 +79,24 @@ public class SwerveDrive {
 
 	}
 
-	// update swerve for field centric from joysticks
-	public void updateSwerve(Joystick translationStickIn,
-			Joystick headingStickIn) {
+	// update swerve from joysticks (either robo or field cent)
+	public void updateSwerve(Joystick translationStick, Joystick headingStick) {
 
-		// long cycleStart = System.currentTimeMillis();
-		// while(timeSinceLastUpdate < UPDATE_TIME){ timeSinceLast = }
-
-		this.translationStick = translationStickIn;
-		this.headingStick = headingStickIn;
+		// if the code is field cent set the sticks for future use, otherwise
+		// use to get values for the robo cent
+		if (isFieldcentric == true) {
+			this.translationStick = translationStick;
+			this.headingStick = headingStick; // field cent heading
+		} else {
+			strafe = translationStick.getX();
+			forward = translationStick.getY();
+			rotationCW = headingStick.getX() * 2 * Math.PI; // rotational
+															// velocity omega,
+															// converted to rad
+		}
 
 		this.calc();
 		this.output();
-
 	}
 
 	public void setStrafe(double strafeIn) {
@@ -106,6 +118,7 @@ public class SwerveDrive {
 	}
 
 	// CALC METHODS
+
 	private void convertFieldToRobocentric() {
 
 		// calculate the current heading
@@ -128,6 +141,7 @@ public class SwerveDrive {
 	}
 
 	private void normalizeTranslation() {
+		// not necessary with the XBox controllers but just in case...
 		if (Math.pow(forward, 2) + Math.pow(strafe, 2) > 1) {
 			forward = Math.sqrt(Math.pow(forward, 2)
 					/ (Math.pow(forward, 2) + Math.pow(strafe, 2)));
@@ -146,7 +160,6 @@ public class SwerveDrive {
 		rightY = forward - Ry;
 		bottomX = strafe - Rx;
 		leftY = strafe + Ry;
-
 	}
 
 	private void setWheelSpeeds() {

@@ -13,6 +13,6 @@ public class DriveMain {
 			d1.updateSwerve(.5, -.2, 1); // for,strafe,rotCW
 		}
 		long diff = (System.currentTimeMillis() - last);
-		System.out.println("\n step = " + diff);
+		System.out.println("\n time for 1000 runs: " + diff + " ms");
 	}
 }
