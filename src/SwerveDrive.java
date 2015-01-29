@@ -29,9 +29,11 @@ public class SwerveDrive {
 
 	// Field Centric Specific Components
 	private boolean isFieldcentric; // are we doin' field centric calculations?
-	Joystick translationStick, headingStick; // field centric sticks to control
-												// the robot
+
 	private double heading, lastHeading; // field centric headings
+
+	// Joysticks
+	Joystick translationStick, headingStick;
 
 	// Robot Specs
 	private double width, length; // length and width of the robot
@@ -40,6 +42,26 @@ public class SwerveDrive {
 	final double ANGLE_CONVERSION = 180 / Math.PI;
 
 	// CONSTRUCTORS - eventually get them all to accept passed SpeedControllers
+
+	public SwerveDrive(double length, double width) {
+		this.width = width;
+		this.length = length;
+
+		this.isFieldcentric = false;
+		this.lastHeading = 0;
+
+		this.updateEndTime = System.currentTimeMillis();
+	}
+
+	public SwerveDrive(double length, double width, boolean fieldcentric) {
+		this.width = width;
+		this.length = length;
+
+		this.isFieldcentric = fieldcentric;
+		this.lastHeading = 0;
+
+		this.updateEndTime = System.currentTimeMillis();
+	}
 
 	public SwerveDrive(double length, double width, Joystick translationStick,
 			Joystick headingStick) {
@@ -54,11 +76,16 @@ public class SwerveDrive {
 		this.updateEndTime = System.currentTimeMillis();
 	}
 
-	public SwerveDrive(double length, double width, boolean fieldcentric) {
+	public SwerveDrive(double length, double width, boolean fieldcentric,
+			Joystick translationStick, Joystick headingStick) {
 		this.width = width;
 		this.length = length;
+		this.translationStick = translationStick;
+		this.headingStick = headingStick;
+
 		this.isFieldcentric = fieldcentric;
 		this.lastHeading = 0;
+
 		this.updateEndTime = System.currentTimeMillis();
 	}
 
