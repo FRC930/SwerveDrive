@@ -287,7 +287,7 @@ public class SwerveDrive {
 		updateEndTime = System.currentTimeMillis();
 	}
 
-	// update if your joysticks are already in place
+	// update swerve from your joysticks are already in constructor
 	public void updateSwerve() {
 
 		// basic input values
@@ -409,7 +409,7 @@ public class SwerveDrive {
 	// BL.set(bottomLeftSpeed);
 	// BR.set(bottomRightSpeed);
 	//
-	//
+	// 
 
 	// CONTROL METHODS
 

@@ -7,7 +7,7 @@ public class DriveMain {
 		SwerveDrive swerve = new SwerveDrive(36, 24);
 		
 		long last = System.currentTimeMillis();
-		for (int t = 0; t < 1000; t++) {
+		for (int t = 0; t < 100; t++) {
 			swerve.updateSwerve(.5, -.2, 1); // for,strafe,rotCW
 		}
 		long diff = (System.currentTimeMillis() - last);
