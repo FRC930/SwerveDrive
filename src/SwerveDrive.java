@@ -19,8 +19,7 @@ public class SwerveDrive {
 	// DECLARATIONS OF VARIABLES AND OTHER THINGS THE CODE MIGHT FIND USEFUL
 
 	// Time Components
-	final long UPDATE_TIME = 5; // time between updates to the robot,
-								// in milliseconds
+	final long UPDATE_TIME = 5; // time between updates to the robot (ms)
 	long updateStartTime; // time of this update's start
 	long updateEndTime; // time of the last update's end
 	long timeSinceLastUpdate; // time since the last update, in seconds
@@ -42,11 +41,16 @@ public class SwerveDrive {
 
 	// CONSTRUCTORS - eventually get them all to accept passed SpeedControllers
 
-	public SwerveDrive(double length, double width) {
+	public SwerveDrive(double length, double width, Joystick translationStick,
+			Joystick headingStick) {
 		this.width = width;
 		this.length = length;
+		this.translationStick = translationStick;
+		this.headingStick = headingStick;
+
 		this.isFieldcentric = false;
 		this.lastHeading = 0;
+
 		this.updateEndTime = System.currentTimeMillis();
 	}
 
@@ -190,6 +194,104 @@ public class SwerveDrive {
 		rotationCW = (heading - lastHeading) / (timeSinceLastUpdate * 1000);
 
 		lastHeading = heading;
+
+		// Normalize Translation
+		// not necessary with the XBox controllers but just in case...
+		if (Math.pow(forward, 2) + Math.pow(strafe, 2) > 1) {
+			double f2 = Math.pow(forward, 2);
+			double s2 = Math.pow(strafe, 2);
+
+			forward = Math.sqrt(f2 / (f2 + s2));
+			strafe = Math.sqrt(s2 / (f2 + s2));
+		}
+
+		// Set intermediates
+		double Rx = rotationCW * length / 2;
+		double Ry = rotationCW * width / 2;
+
+		double topX = strafe + Rx;
+		double rightY = forward - Ry;
+		double bottomX = strafe - Rx;
+		double leftY = strafe + Ry;
+
+		// Set wheel speeds
+		double tx2 = Math.pow(topX, 2);
+		double bx2 = Math.pow(bottomX, 2);
+		double ry2 = Math.pow(rightY, 2);
+		double ly2 = Math.pow(leftY, 2);
+
+		double topRightSpeed = Math.sqrt(tx2 + ry2);
+		double topLeftSpeed = Math.sqrt(tx2 + ly2);
+		double bottomLeftSpeed = Math.sqrt(bx2 + ly2);
+		double bottomRightSpeed = Math.sqrt(bx2 + ry2);
+
+		double max;
+		max = topRightSpeed;
+		if (topLeftSpeed > max) {
+			max = topLeftSpeed;
+		}
+		if (bottomLeftSpeed > max) {
+			max = bottomLeftSpeed;
+		}
+		if (bottomRightSpeed > max) {
+			max = bottomRightSpeed;
+		}
+		if (max > 1) {
+			topRightSpeed /= max;
+			topLeftSpeed /= max;
+			bottomLeftSpeed /= max;
+			bottomRightSpeed /= max;
+		}
+
+		// Set wheel angles
+		double topRightAngle = 90 - Math.atan2(topX, rightY) * ANGLE_CONVERSION;
+		double topLeftAngle = 90 - Math.atan2(topX, leftY) * ANGLE_CONVERSION;
+		double bottomLeftAngle = 90 - Math.atan2(bottomX, leftY)
+				* ANGLE_CONVERSION;
+		double bottomRightAngle = 90 - Math.atan2(bottomX, rightY)
+				* ANGLE_CONVERSION;
+
+		// output
+		System.out.println(topRightSpeed + "\n" + topLeftSpeed + "\n"
+				+ bottomLeftSpeed + "\n" + bottomRightSpeed + "\n");
+		System.out.println(topRightAngle + "\n" + topLeftAngle + "\n"
+				+ bottomLeftAngle + "\n" + bottomRightAngle + "\n");
+
+		updateEndTime = System.currentTimeMillis();
+	}
+
+	// update if your joysticks are already in place
+	public void updateSwerve() {
+
+		// basic input values
+		double strafe, forward, rotationCW;
+
+		this.timeControl();
+
+		// if the code is field cent set the sticks for future use, otherwise
+		// use to get values for the robo cent
+		if (isFieldcentric == false) {
+			strafe = translationStick.getX();
+			forward = translationStick.getY();
+			rotationCW = headingStick.getX() * 2 * Math.PI;
+		} else { // if you are using fieldcent...
+			heading = 90 - Math.atan2(headingStick.getX(), headingStick.getY())
+					* ANGLE_CONVERSION;
+
+			// defining the velocity vector in polar to convert to robocentric
+			double magnitudeV = Math.sqrt(Math.pow(translationStick.getX(), 2)
+					+ Math.pow(translationStick.getY(), 2));
+			double phiV = 90
+					- Math.atan2(translationStick.getX(),
+							translationStick.getY()) * ANGLE_CONVERSION;
+
+			// do the conversion so the robocentic code can handle the rest
+			strafe = magnitudeV * Math.sin(phiV - lastHeading);
+			forward = magnitudeV * Math.cos(phiV - lastHeading);
+			rotationCW = (heading - lastHeading) / (timeSinceLastUpdate * 1000);
+
+			lastHeading = heading;
+		}
 
 		// Normalize Translation
 		// not necessary with the XBox controllers but just in case...
